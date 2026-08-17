@@ -1,0 +1,39 @@
+# Built artifacts
+build/
+dist/
+out/
+*.log
+*.tmp
+*.swp
+
+# Local-only / never committed
+important-files/
+secret/
+*.doc
+
+# IDE/Editor
+.idea/
+.vscode/
+.project
+.settings
+.crush
+*.bak
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.prod
+.env.test
+
+# Node.js
+node_modules/
+*.cache
+
+# Private planner data — see CLAUDE.md "Critical: data sensitivity". Never commit.
+fullplannertext
+fullplannertext.txt
+*.export.txt
