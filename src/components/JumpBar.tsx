@@ -11,7 +11,6 @@ export function JumpBar({ days }: { days: Day[] }) {
           </a>
         ))}
       </div>
-      <span className="label">B — Warm</span>
     </nav>
   )
 }
