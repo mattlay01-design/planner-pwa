@@ -66,6 +66,11 @@ export interface TodoSection {
 export interface TodoItem {
   raw: string
   text: string
+  // Optional deadline/association with a specific Day, set manually via the UI (not
+  // parsed from the source text — the source has no such notion). App-only metadata:
+  // it lives in IndexedDB but has no representation in the Apple Notes export format,
+  // so it does not currently round-trip through export/re-import.
+  linkedDate?: ISODate
 }
 
 export type TimeSpecKind = 'exact' | 'range' | 'fuzzy' | 'none'

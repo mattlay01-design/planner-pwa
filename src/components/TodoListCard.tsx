@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { TodoItem, TodoList, TodoSection } from '../domain/types'
 import type { PlannerDb } from '../store/db'
+import { formatDayShort } from '../utils/formatDate'
 import { moved } from '../utils/arrays'
 
 interface EditTarget {
@@ -22,6 +23,8 @@ interface TodoListCardProps {
 export function TodoListCard({ todoList, occurrenceIndex, db, onTodoListUpdated }: TodoListCardProps) {
   const [editingLabel, setEditingLabel] = useState<number | null>(null) // section index
   const [editingItem, setEditingItem] = useState<EditTarget | null>(null)
+  const [settingDate, setSettingDate] = useState<EditTarget | null>(null)
+  const [dateDraft, setDateDraft] = useState('')
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -70,7 +73,10 @@ export function TodoListCard({ todoList, occurrenceIndex, db, onTodoListUpdated 
     const text = draft.trim()
     setEditingItem(null)
     if (!text) return
-    const item: TodoItem = { raw: text, text }
+    // Preserve an existing linkedDate across a text edit — editing an item's wording
+    // shouldn't silently drop its day association.
+    const existingLinkedDate = itemIndex === null ? undefined : todoList.sections[sectionIndex].items[itemIndex].linkedDate
+    const item: TodoItem = { raw: text, text, linkedDate: existingLinkedDate }
     await save(
       withSection(sectionIndex, (s) => ({
         ...s,
@@ -85,6 +91,15 @@ export function TodoListCard({ todoList, occurrenceIndex, db, onTodoListUpdated 
 
   async function moveItem(sectionIndex: number, itemIndex: number, dir: -1 | 1) {
     await save(withSection(sectionIndex, (s) => ({ ...s, items: moved(s.items, itemIndex, itemIndex + dir) })))
+  }
+
+  async function setItemDate(sectionIndex: number, itemIndex: number, linkedDate: string) {
+    await save(
+      withSection(sectionIndex, (s) => ({
+        ...s,
+        items: s.items.map((it, i) => (i === itemIndex ? { ...it, linkedDate: linkedDate || undefined } : it)),
+      })),
+    )
   }
 
   return (
@@ -134,6 +149,32 @@ export function TodoListCard({ todoList, occurrenceIndex, db, onTodoListUpdated 
                 <div className="entry-row-main" onClick={() => startEditItem(si, ii)}>
                   {item.text}
                 </div>
+                {settingDate?.sectionIndex === si && settingDate.itemIndex === ii ? (
+                  <input
+                    type="date"
+                    className="edit-input todo-date-input"
+                    autoFocus
+                    value={dateDraft}
+                    onChange={(e) => setDateDraft(e.target.value)}
+                    onBlur={() => {
+                      setSettingDate(null)
+                      setItemDate(si, ii, dateDraft)
+                    }}
+                    disabled={saving}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className={item.linkedDate ? 'todo-date-badge set' : 'todo-date-badge'}
+                    onClick={() => {
+                      setDateDraft(item.linkedDate ?? '')
+                      setSettingDate({ sectionIndex: si, itemIndex: ii })
+                    }}
+                    disabled={saving}
+                  >
+                    {item.linkedDate ? formatDayShort(item.linkedDate) : '+ date'}
+                  </button>
+                )}
                 <div className="entry-row-actions">
                   <button type="button" className="mini-btn" onClick={() => moveItem(si, ii, -1)} disabled={ii === 0 || saving} aria-label="Move item earlier">
                     ‹

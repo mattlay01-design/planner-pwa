@@ -86,6 +86,31 @@ body {
   margin: 3px 0;
 }
 
+.todo-date-badge {
+  flex-shrink: 0;
+  border: 1px dashed #d8c7a4;
+  background: transparent;
+  color: #a9855a;
+  font-family: Georgia, serif;
+  font-size: 10.5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.todo-date-badge.set {
+  border-style: solid;
+  background: #f1d9b8;
+  color: #7a4f1c;
+}
+
+.todo-date-input {
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 2px 4px;
+  width: 128px;
+}
+
 .jumpbar {
   display: flex;
   align-items: center;
@@ -142,6 +167,25 @@ main {
   font-size: 17px;
   font-weight: 700;
   color: #55462e;
+}
+
+.linked-todos {
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.linked-todo {
+  font-size: 12.5px;
+  color: #7a4f1c;
+  background: #fbf3e3;
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+
+.linked-todo-label {
+  font-weight: 700;
 }
 
 .banners {
@@ -210,6 +254,49 @@ main {
 .child .time {
   min-width: 74px;
   font-size: 12.5px;
+}
+
+.editable-children {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.child-row-edit {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.child-row-main {
+  flex: 1;
+  cursor: text;
+  min-width: 0;
+}
+
+.child-row-main.not-editable {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.child-input {
+  width: 100%;
+  font-size: 13.5px;
+  padding: 4px 8px;
+}
+
+.add-child {
+  border: 1px dashed #e6d7b8;
+  background: transparent;
+  color: #a9855a;
+  cursor: pointer;
+  font-family: Georgia, serif;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  align-self: flex-start;
+  margin-top: 2px;
 }
 
 .import-screen {
@@ -317,6 +404,31 @@ main {
 
 .export-error {
   color: #a13d2c;
+}
+
+.import-cancel {
+  display: block;
+  margin-top: 10px;
+  background: transparent;
+  border: none;
+  color: #a9702c;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.add-more-days {
+  flex-shrink: 0;
+  background: #eee2cb;
+  color: #7c6a52;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-family: Georgia, serif;
+  font-size: 12px;
+  cursor: pointer;
+  margin: 0 14px 12px;
 }
 
 .import-notice {
@@ -495,7 +607,8 @@ main {
 
 .editable-group {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .entry-row-edit {
@@ -529,6 +642,47 @@ main {
   gap: 2px;
   flex-shrink: 0;
   padding-top: 2px;
+}
+
+.placeholder-btn {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px;
+  border: 1px dashed #d8c7a4;
+  border-radius: 10px;
+  background: transparent;
+  color: #a9855a;
+  font-family: Georgia, serif;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.placeholder-box {
+  margin-top: 10px;
+  border: 2px dashed #d8b98a;
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #fbf3e3;
+}
+
+.placeholder-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: #6b5f4d;
+  margin-bottom: 8px;
+}
+
+.placeholder-field input {
+  font-family: Georgia, serif;
+  border: 1px solid #d8b98a;
+  border-radius: 6px;
+  background: #fffdf8;
+  color: #3d3630;
+  padding: 6px 8px;
+  font-size: 14px;
 }
 
 .gen-btn {

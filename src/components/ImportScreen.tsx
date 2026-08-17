@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import type { Day, TodoList } from '../domain/types'
-import { importPlannerText } from '../import/importPlannerText'
+import { importPlannerText, type ImportMode } from '../import/importPlannerText'
 import type { PlannerDb } from '../store/db'
 
 interface ImportScreenProps {
   db: PlannerDb
-  onImported: (days: Day[], todoLists: TodoList[], duplicateDates: string[]) => void
+  mode?: ImportMode // 'replace' (default) for first-run/restore; 'merge' to add non-overlapping days
+  onImported: (days: Day[], todoLists: TodoList[], duplicateDates: string[], skippedDates: string[]) => void
+  onCancel?: () => void // only offered in 'merge' mode, where there's an existing state to return to
 }
 
-export function ImportScreen({ db, onImported }: ImportScreenProps) {
+export function ImportScreen({ db, mode = 'replace', onImported, onCancel }: ImportScreenProps) {
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pasted, setPasted] = useState('')
@@ -17,9 +19,9 @@ export function ImportScreen({ db, onImported }: ImportScreenProps) {
     setImporting(true)
     setError(null)
     try {
-      const result = await importPlannerText(text, db)
+      const result = await importPlannerText(text, db, mode)
       const [days, todoLists] = await Promise.all([db.getAllDays(), db.getAllTodoLists()])
-      onImported(days, todoLists, result.duplicateDates)
+      onImported(days, todoLists, result.duplicateDates, result.skippedDates)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Import failed.')
       setImporting(false)
@@ -42,8 +44,12 @@ export function ImportScreen({ db, onImported }: ImportScreenProps) {
 
   return (
     <div className="phone import-screen">
-      <h1>Import your planner</h1>
-      <p>Choose your exported planner text file to load your year.</p>
+      <h1>{mode === 'merge' ? 'Add more days' : 'Import your planner'}</h1>
+      <p>
+        {mode === 'merge'
+          ? "Import another chunk of planner text. Days whose date you've already got are left untouched — only new dates are added."
+          : 'Choose your exported planner text file to load your year.'}
+      </p>
       <label className="import-picker">
         {importing ? 'Importing…' : 'Choose file'}
         <input
@@ -70,6 +76,11 @@ export function ImportScreen({ db, onImported }: ImportScreenProps) {
       <p className="import-error" aria-live="polite">
         {error ?? ''}
       </p>
+      {onCancel && (
+        <button type="button" className="import-cancel" onClick={onCancel} disabled={importing}>
+          Cancel
+        </button>
+      )}
     </div>
   )
 }
