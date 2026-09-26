@@ -8,29 +8,33 @@
 
 html {
   scroll-behavior: smooth;
-  overflow-x: hidden;
-  touch-action: pan-y;
 }
 
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* No overflow-x/touch-action guards here on purpose: overflow-x on html+body turned body
+   into a scroll container (breaking the sticky .chrome), and touch-action: pan-y blocked
+   pinch-zoom, which trapped users in a cut-off view. */
+body {
+  margin: 0;
+  background: #cfc6b8;
+  font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+  /* Inherited. `anywhere` (not break-word) also lowers min-content, so one long word/URL
+     can't force a flex row wider than the screen. */
   overflow-wrap: anywhere;
 }
 
-body {
-  margin: 0;
-  overflow-x: hidden;
-  touch-action: pan-y;
-  background: #cfc6b8;
-  font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
-  display: flex;
-  justify-content: center;
-}
-
+/* Centered with auto margins, not a flex body: React's #root sits between body and
+   .phone, so a flex body made #root the flex item, sized to .phone's min-content (the
+   nowrap jump-chip row) capped at 480px — wider than every phone, then centered, so it
+   overflowed off both screen edges. */
 .phone {
   width: 100%;
   max-width: 480px;
+  margin: 0 auto;
   min-height: 100vh;
   background: #f6efe1;
   color: #3d3630;
@@ -150,7 +154,9 @@ main {
 }
 
 .day {
-  scroll-margin-top: 72px;
+  /* Clears the sticky .chrome (tabs + jump bar + export + add-more-days, ~180px) so a
+     jump-chip tap doesn't park the day header underneath it. */
+  scroll-margin-top: calc(190px + env(safe-area-inset-top));
   background: #fffdf8;
   border-radius: 18px;
   box-shadow: 0 3px 10px rgba(120, 100, 70, 0.12);
@@ -253,7 +259,6 @@ main {
   color: #6b5f4d;
   display: flex;
   gap: 8px;
-  min-width: 0;
 }
 
 .child .time {
@@ -711,4 +716,15 @@ main {
 .gen-btn:active {
   transform: translateX(-50%) scale(0.95);
   box-shadow: 0 2px 8px rgba(120, 70, 20, 0.35);
+}
+
+/* iOS Safari zooms the page when a form field under 16px gets focus and never zooms back
+   out, leaving the layout cut off. Keep fields at 16px on touch screens. Must stay last
+   so it wins over the equal-specificity per-field font sizes above. */
+@media (pointer: coarse) {
+  .edit-input,
+  .placeholder-field input,
+  .import-paste {
+    font-size: 16px;
+  }
 }
