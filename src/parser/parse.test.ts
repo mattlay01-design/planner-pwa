@@ -163,6 +163,15 @@ describe('parse', () => {
     expect(() => parse(src)).toThrow(/weekday/i)
   })
 
+  // Real case: a pasted week (Oct 25-31) duplicated after itself. The error must point at
+  // the header that goes backwards, not the first header in the file.
+  it('names the out-of-order header, its line, and its predecessor when no year fits', () => {
+    const src = 'Thursday, September 24\n\n………\n\nSaturday, October 31\n\n………\n\nSunday, October 25\n\n………\n'
+    expect(() => parse(src)).toThrow(
+      '"Sunday, October 25" on line 9 (after "Saturday, October 31" on line 5)',
+    )
+  })
+
   it('infers the year from the title line', () => {
     const src = `⚫️ 2026 Masterplan Hx\n\n………\n\nThursday, January 1\n\n………\n`
     expect(parse(src).days[0].date).toBe('2026-01-01')
