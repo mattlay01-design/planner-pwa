@@ -32,3 +32,21 @@ export function addDays(date: ISODate, n: number): ISODate {
   d.setUTCDate(d.getUTCDate() + n)
   return d.toISOString().slice(0, 10)
 }
+
+// Local calendar date, not toISOString() (UTC), so late-evening use doesn't jump a day ahead.
+export function todayISO(now: Date = new Date()): ISODate {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
+// Day to show on app open: today, else the next future day, else the last day.
+// ISO dates compare correctly as strings; `days` need not be sorted.
+export function pickScrollTargetDate(dates: ISODate[], today: ISODate): ISODate | undefined {
+  let next: ISODate | undefined
+  let last: ISODate | undefined
+  for (const d of dates) {
+    if (d >= today && (next === undefined || d < next)) next = d
+    if (last === undefined || d > last) last = d
+  }
+  return next ?? last
+}

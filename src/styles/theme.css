@@ -145,6 +145,11 @@ body {
   transition: background 0.15s, color 0.15s, transform 0.1s;
 }
 
+.jumpbar a.today {
+  background: #b5651d;
+  color: #fffdf8;
+}
+
 .jumpbar a:active {
   transform: scale(0.94);
 }

@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Day, TodoList } from '../domain/types'
 import type { PlannerDb } from '../store/db'
-import { formatDayShort } from '../utils/formatDate'
+import { dayAnchorId, formatDayShort, pickScrollTargetDate, todayISO } from '../utils/formatDate'
 import { DayCard } from './DayCard'
 import { ExportButton } from './ExportButton'
 import { GenerateDayButton } from './GenerateDayButton'
@@ -58,6 +58,23 @@ export function DayStream({
   const [tab, setTab] = useState<'days' | 'todos'>('days')
   const occurrenceCounts = new Map<string, number>()
   const linkedItems = useMemo(() => linkedItemsByDate(todoLists), [todoLists])
+  const [today] = useState(todayISO)
+
+  // Once per mount (app open, or after an import), jump to today — else the next day,
+  // else the last. Empty deps on purpose: edits must not yank the user's scroll back.
+  // 'instant' overrides html's scroll-behavior: smooth.
+  useEffect(() => {
+    const target = pickScrollTargetDate(
+      days.map((d) => d.date),
+      today,
+    )
+    if (!target) return
+    const id = dayAnchorId(target)
+    document.getElementById(id)?.scrollIntoView({ behavior: 'instant', block: 'start' })
+    const chip = document.querySelector<HTMLElement>(`.jumpbar a[href="#${id}"]`)
+    const row = chip?.parentElement
+    if (chip && row) row.scrollLeft += chip.getBoundingClientRect().left - row.getBoundingClientRect().left
+  }, [])
 
   return (
     <div className="phone">
@@ -70,7 +87,7 @@ export function DayStream({
             To-Do
           </button>
         </div>
-        <JumpBar days={days} />
+        <JumpBar days={days} today={today} />
         <ExportButton days={days} todoLists={todoLists} />
         <button type="button" className="add-more-days" onClick={onAddMoreDays}>
           + Add more days
