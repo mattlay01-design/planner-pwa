@@ -26,6 +26,16 @@ describe('parse', () => {
     ])
   })
 
+  it('parses space-indented banners (tab turned to spaces by copy/paste)', () => {
+    const src = 'Sunday, October 11\n    *11\n    **Emcart & Rose visit!!\n\n4pm - NCF-WE\n\n………\n'
+    const [day] = parse(src).days
+    expect(day.banners.map((b) => [b.text, b.indented])).toEqual([
+      ['11', true],
+      ['Emcart & Rose visit!!', true],
+    ])
+    expect(day.groups).toHaveLength(1)
+  })
+
   it('parses two banners in ordinal position, one tab-indented (Apr 24)', () => {
     const src =
       'Friday, April 24\n\n\t*Melissa babysits!\n\n**On-call\n\n………………………………………………………………\n'

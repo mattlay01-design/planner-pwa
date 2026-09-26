@@ -4,6 +4,7 @@ import { parseEntry } from '../parser/parse'
 import type { PlannerDb } from '../store/db'
 import { dayAnchorId, formatDayHeader } from '../utils/formatDate'
 import { moved } from '../utils/arrays'
+import { EditInput } from './EditInput'
 
 function EntryRow({ entry: e, variant }: { entry: Entry; variant: 'entry' | 'child' }) {
   return (
@@ -33,12 +34,19 @@ export function DayCard({ day, occurrenceIndex, db, onDayUpdated, linkedTodoItem
   const [addingChild, setAddingChild] = useState<number | null>(null) // group index whose children we're adding to
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(false)
 
   async function save(next: Day) {
+    setSaveError(false)
     setSaving(true)
     try {
       await db.updateDay(day.date, occurrenceIndex, next)
       onDayUpdated(occurrenceIndex, next)
+    } catch (err) {
+      // Storage write failed (quota, iOS evicting site data) — say so rather than let the
+      // edit silently vanish.
+      console.error('save failed', err)
+      setSaveError(true)
     } finally {
       setSaving(false)
     }
@@ -201,6 +209,7 @@ export function DayCard({ day, occurrenceIndex, db, onDayUpdated, linkedTodoItem
       <div className="day-header-row">
         <div className="day-header">{formatDayHeader(day.date)}</div>
       </div>
+      {saveError && <p className="import-error">Couldn&rsquo;t save that change — try again.</p>}
 
       {linkedTodoItems.length > 0 && (
         <div className="linked-todos">
@@ -215,17 +224,13 @@ export function DayCard({ day, occurrenceIndex, db, onDayUpdated, linkedTodoItem
       <div className="banners">
         {day.banners.map((b, i) =>
           editingBanner === i ? (
-            <input
+            <EditInput
               key={i}
               className="edit-input banner-input"
-              autoFocus
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={commitEditBanner}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') commitEditBanner()
-                if (e.key === 'Escape') setEditingBanner(null)
-              }}
+              onChange={setDraft}
+              onCommit={commitEditBanner}
+              onCancel={() => setEditingBanner(null)}
               disabled={saving}
             />
           ) : (
@@ -244,17 +249,13 @@ export function DayCard({ day, occurrenceIndex, db, onDayUpdated, linkedTodoItem
           ),
         )}
         {addingBanner ? (
-          <input
+          <EditInput
             className="edit-input banner-input"
-            autoFocus
             placeholder="New banner…"
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commitAddBanner}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') commitAddBanner()
-              if (e.key === 'Escape') setAddingBanner(false)
-            }}
+            onChange={setDraft}
+            onCommit={commitAddBanner}
+            onCancel={() => setAddingBanner(false)}
             disabled={saving}
           />
         ) : (
@@ -267,16 +268,12 @@ export function DayCard({ day, occurrenceIndex, db, onDayUpdated, linkedTodoItem
       {day.groups.map((group, gi) => (
         <div className="group editable-group" key={gi}>
           {editingEntry === gi ? (
-            <input
+            <EditInput
               className="edit-input entry-input"
-              autoFocus
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={commitEditEntry}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') commitEditEntry()
-                if (e.key === 'Escape') setEditingEntry(null)
-              }}
+              onChange={setDraft}
+              onCommit={commitEditEntry}
+              onCancel={() => setEditingEntry(null)}
               disabled={saving}
             />
           ) : (
@@ -320,17 +317,13 @@ export function DayCard({ day, occurrenceIndex, db, onDayUpdated, linkedTodoItem
             <div className="children editable-children">
               {group[0].children.map((child, ci) =>
                 editingChild && editingChild.gi === gi && editingChild.ci === ci ? (
-                  <input
+                  <EditInput
                     key={ci}
                     className="edit-input child-input"
-                    autoFocus
                     value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    onBlur={commitEditChild}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') commitEditChild()
-                      if (e.key === 'Escape') setEditingChild(null)
-                    }}
+                    onChange={setDraft}
+                    onCommit={commitEditChild}
+                    onCancel={() => setEditingChild(null)}
                     disabled={saving}
                   />
                 ) : (
@@ -357,17 +350,13 @@ export function DayCard({ day, occurrenceIndex, db, onDayUpdated, linkedTodoItem
                 ),
               )}
               {addingChild === gi ? (
-                <input
+                <EditInput
                   className="edit-input child-input"
-                  autoFocus
                   placeholder="7:15-8:15am - sub-point…"
                   value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onBlur={commitAddChild}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') commitAddChild()
-                    if (e.key === 'Escape') setAddingChild(null)
-                  }}
+                  onChange={setDraft}
+                  onCommit={commitAddChild}
+                  onCancel={() => setAddingChild(null)}
                   disabled={saving}
                 />
               ) : (
@@ -381,17 +370,13 @@ export function DayCard({ day, occurrenceIndex, db, onDayUpdated, linkedTodoItem
       ))}
 
       {addingEntry ? (
-        <input
+        <EditInput
           className="edit-input entry-input"
-          autoFocus
           placeholder="9am-5pm - new entry…"
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commitAddEntry}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') commitAddEntry()
-            if (e.key === 'Escape') setAddingEntry(false)
-          }}
+          onChange={setDraft}
+          onCommit={commitAddEntry}
+          onCancel={() => setAddingEntry(false)}
           disabled={saving}
         />
       ) : (

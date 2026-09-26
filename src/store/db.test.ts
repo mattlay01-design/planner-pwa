@@ -72,4 +72,17 @@ describe('db', () => {
 
     expect(await db.getDay('2026-02-02')).toEqual([editedFirst, feb2b])
   })
+
+  it('replaceAll swaps out all data, keeping same-date records apart', async () => {
+    const db = await freshTestDb()
+    await db.putDay({ date: '2026-03-01', banners: [], groups: [] })
+    const feb2a: Day = { date: '2026-02-02', banners: [], groups: [] }
+    const feb2b: Day = { ...feb2a, banners: [{ raw: '*x', text: 'x', indented: false }] }
+
+    await db.replaceAll([jan5, feb2a, feb2b], [])
+
+    expect(await db.getAllDays()).toEqual([jan5, feb2a, feb2b])
+    await db.updateDay('2026-02-02', 1, feb2a)
+    expect(await db.getDay('2026-02-02')).toEqual([feb2a, feb2a])
+  })
 })

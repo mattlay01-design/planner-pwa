@@ -6,7 +6,9 @@ const HEADER_RE = /^([A-Za-z]+), ([A-Za-z]+) (\d{1,2})\s*$/
 // (the source's one real case: "Wednesday, May 13-Thursday, May 14", an overnight trip).
 const COMBINED_HEADER_RE = /^([A-Za-z]+), ([A-Za-z]+) (\d{1,2})-([A-Za-z]+), ([A-Za-z]+) (\d{1,2})\s*$/
 const SEPARATOR_RE = /^…+$/
-const BANNER_RE = /^(\t?)(\*+)(.*)$/
+// Leading whitespace = indented. Apple Notes uses a tab, but copy/paste through other
+// apps often turns it into spaces — that must still read as a banner, not an entry.
+const BANNER_RE = /^([\t ]*)(\*+)(.*)$/
 const TITLE_YEAR_RE = /(\d{4})/
 // Marks a line as a to-do-list section heading (real cases: "Kylie's To-Do:",
 // "Matt's To-Do:") — used both to spot where a running to-do list starts (the group
@@ -157,8 +159,8 @@ function parseBanner(line: string): Banner | null {
   const match = BANNER_RE.exec(line)
   if (!match) return null
 
-  const [, tab, , text] = match
-  return { raw: line, text, indented: tab === '\t' }
+  const [, indent, , text] = match
+  return { raw: line, text, indented: indent.length > 0 }
 }
 
 // Exported so the freeform add/edit UI (DayCard) can turn a single typed line into an

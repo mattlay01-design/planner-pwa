@@ -3,6 +3,7 @@ import type { TodoItem, TodoList, TodoSection } from '../domain/types'
 import type { PlannerDb } from '../store/db'
 import { formatDayShort } from '../utils/formatDate'
 import { moved } from '../utils/arrays'
+import { EditInput } from './EditInput'
 
 interface EditTarget {
   sectionIndex: number
@@ -27,12 +28,19 @@ export function TodoListCard({ todoList, occurrenceIndex, db, onTodoListUpdated 
   const [dateDraft, setDateDraft] = useState('')
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(false)
 
   async function save(next: TodoList) {
+    setSaveError(false)
     setSaving(true)
     try {
       await db.updateTodoList(todoList.date, occurrenceIndex, next)
       onTodoListUpdated(occurrenceIndex, next)
+    } catch (err) {
+      // Storage write failed (quota, iOS evicting site data) — say so rather than let the
+      // edit silently vanish.
+      console.error('save failed', err)
+      setSaveError(true)
     } finally {
       setSaving(false)
     }
@@ -107,20 +115,17 @@ export function TodoListCard({ todoList, occurrenceIndex, db, onTodoListUpdated 
       <div className="day-header-row">
         <div className="day-header">{todoList.heading}</div>
       </div>
+      {saveError && <p className="import-error">Couldn&rsquo;t save that change — try again.</p>}
 
       {todoList.sections.map((section, si) => (
         <div className="todo-section" key={si}>
           {editingLabel === si ? (
-            <input
+            <EditInput
               className="edit-input"
-              autoFocus
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={commitEditLabel}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') commitEditLabel()
-                if (e.key === 'Escape') setEditingLabel(null)
-              }}
+              onChange={setDraft}
+              onCommit={commitEditLabel}
+              onCancel={() => setEditingLabel(null)}
               disabled={saving}
             />
           ) : (
@@ -131,17 +136,13 @@ export function TodoListCard({ todoList, occurrenceIndex, db, onTodoListUpdated 
 
           {section.items.map((item, ii) =>
             editingItem?.sectionIndex === si && editingItem.itemIndex === ii ? (
-              <input
+              <EditInput
                 key={ii}
                 className="edit-input entry-input"
-                autoFocus
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onBlur={commitItem}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') commitItem()
-                  if (e.key === 'Escape') setEditingItem(null)
-                }}
+                onChange={setDraft}
+                onCommit={commitItem}
+                onCancel={() => setEditingItem(null)}
                 disabled={saving}
               />
             ) : (
@@ -158,7 +159,7 @@ export function TodoListCard({ todoList, occurrenceIndex, db, onTodoListUpdated 
                     onChange={(e) => setDateDraft(e.target.value)}
                     onBlur={() => {
                       setSettingDate(null)
-                      setItemDate(si, ii, dateDraft)
+                      if (dateDraft !== (item.linkedDate ?? '')) setItemDate(si, ii, dateDraft)
                     }}
                     disabled={saving}
                   />
@@ -191,17 +192,13 @@ export function TodoListCard({ todoList, occurrenceIndex, db, onTodoListUpdated 
           )}
 
           {editingItem?.sectionIndex === si && editingItem.itemIndex === null ? (
-            <input
+            <EditInput
               className="edit-input entry-input"
-              autoFocus
               placeholder="New item…"
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={commitItem}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') commitItem()
-                if (e.key === 'Escape') setEditingItem(null)
-              }}
+              onChange={setDraft}
+              onCommit={commitItem}
+              onCancel={() => setEditingItem(null)}
               disabled={saving}
             />
           ) : (

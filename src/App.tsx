@@ -14,8 +14,23 @@ type AppState =
   | ReadyState
   | { status: 'merge-import'; from: ReadyState }
 
+// Swaps in `next` for the occurrenceIndex-th item sharing its date (same-date records,
+// e.g. the real Feb 2 duplicate, are told apart by position).
+function replaceOccurrence<T extends { date: string }>(items: T[], occurrenceIndex: number, next: T): T[] {
+  let seen = -1
+  return items.map((item) => {
+    if (item.date !== next.date) return item
+    seen += 1
+    return seen === occurrenceIndex ? next : item
+  })
+}
+
 export default function App() {
   const [state, setState] = useState<AppState>({ status: 'loading' })
+
+  function updateReady(fn: (s: ReadyState) => ReadyState) {
+    setState((s) => (s.status === 'ready' ? fn(s) : s))
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -82,30 +97,22 @@ export default function App() {
       duplicateDates={state.duplicateDates}
       skippedDates={state.skippedDates}
       onAddMoreDays={() => setState({ status: 'merge-import', from: state })}
-      onDayAdded={(day) => {
-        // Stable sort so a placeholder day (arbitrary date, not necessarily "next")
-        // lands in the right chronological spot instead of always at the end.
-        const days = [...state.days, day].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
-        setState({ ...state, days })
-      }}
-      onDayUpdated={(occurrenceIndex, day) => {
-        let seen = -1
-        const days = state.days.map((d) => {
-          if (d.date !== day.date) return d
-          seen += 1
-          return seen === occurrenceIndex ? day : d
-        })
-        setState({ ...state, days })
-      }}
-      onTodoListUpdated={(occurrenceIndex, list) => {
-        let seen = -1
-        const todoLists = state.todoLists.map((l) => {
-          if (l.date !== list.date) return l
-          seen += 1
-          return seen === occurrenceIndex ? list : l
-        })
-        setState({ ...state, todoLists })
-      }}
+      // Functional updates: saves from two different cards can resolve before a
+      // re-render, and spreading the render-time `state` would drop the first one.
+      onDayAdded={(day) =>
+        updateReady((s) => ({
+          ...s,
+          // Stable sort so a placeholder day (arbitrary date, not necessarily "next")
+          // lands in the right chronological spot instead of always at the end.
+          days: [...s.days, day].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
+        }))
+      }
+      onDayUpdated={(occurrenceIndex, day) =>
+        updateReady((s) => ({ ...s, days: replaceOccurrence(s.days, occurrenceIndex, day) }))
+      }
+      onTodoListUpdated={(occurrenceIndex, list) =>
+        updateReady((s) => ({ ...s, todoLists: replaceOccurrence(s.todoLists, occurrenceIndex, list) }))
+      }
     />
   )
 }

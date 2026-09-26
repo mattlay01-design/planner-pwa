@@ -28,6 +28,19 @@ export interface PlannerDb {
   // the Day they followed, and there's no guarantee only one ever follows a given date.
   updateTodoList(date: ISODate, occurrenceIndex: number, list: TodoList): Promise<void>
   clearAll(): Promise<void>
+  // Clear + write in one transaction: if the app is killed mid-import (iOS does this to
+  // backgrounded PWAs), the old data survives instead of being half-replaced.
+  replaceAll(days: Day[], lists: TodoList[]): Promise<void>
+}
+
+// Same "date#n" ids putDay/putTodoLists assign, computed in memory for a fresh store.
+function withOccurrenceIds<T extends { date: ISODate }>(items: T[]): (T & { id: string })[] {
+  const counts = new Map<ISODate, number>()
+  return items.map((item) => {
+    const n = counts.get(item.date) ?? 0
+    counts.set(item.date, n + 1)
+    return { ...item, id: `${item.date}#${n}` }
+  })
 }
 
 export async function openPlannerDb(name = 'planner-db'): Promise<PlannerDb> {
@@ -104,6 +117,19 @@ export async function openPlannerDb(name = 'planner-db'): Promise<PlannerDb> {
     async clearAll() {
       await idb.clear(STORE)
       await idb.clear(TODO_STORE)
+    },
+
+    async replaceAll(days: Day[], lists: TodoList[]) {
+      const tx = idb.transaction([STORE, TODO_STORE], 'readwrite')
+      const dayStore = tx.objectStore(STORE)
+      const todoStore = tx.objectStore(TODO_STORE)
+      await Promise.all([
+        dayStore.clear(),
+        todoStore.clear(),
+        ...withOccurrenceIds(days).map((r) => dayStore.put(r)),
+        ...withOccurrenceIds(lists).map((r) => todoStore.put(r)),
+        tx.done,
+      ])
     },
   }
 }

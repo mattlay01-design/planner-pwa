@@ -46,9 +46,7 @@ export async function importPlannerText(
   const { days, todoLists } = parse(rawText)
 
   if (mode === 'replace') {
-    await db.clearAll()
-    await db.putDays(days)
-    await db.putTodoLists(todoLists)
+    await db.replaceAll(days, todoLists)
     return { dayCount: days.length, todoListCount: todoLists.length, duplicateDates: findDuplicateDates(days), skippedDates: [] }
   }
 

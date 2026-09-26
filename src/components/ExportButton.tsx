@@ -3,6 +3,7 @@ import type { Day, TodoList } from '../domain/types'
 import { getLastExportDate, recordExport } from '../export/exportStorage'
 import { shouldNudgeToExport } from '../export/exportTracking'
 import { serialize } from '../parser/serialize'
+import { todayISO } from '../utils/formatDate'
 
 interface ExportButtonProps {
   days: Day[]
@@ -10,7 +11,7 @@ interface ExportButtonProps {
 }
 
 function exportFileName(): string {
-  return `planner-export-${new Date().toISOString().slice(0, 10)}.txt`
+  return `planner-export-${todayISO()}.txt`
 }
 
 function downloadFile(file: File): void {
