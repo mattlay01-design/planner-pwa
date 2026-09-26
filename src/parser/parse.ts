@@ -37,6 +37,7 @@ interface HeaderPart {
 interface HeaderRef {
   start: HeaderPart
   end?: HeaderPart // combined two-day header, e.g. "Wednesday, May 13-Thursday, May 14"
+  line: number // 1-based source line, for error messages
 }
 
 interface ResolvedDate {
@@ -59,21 +60,22 @@ function resolvePart(part: HeaderPart, cursor: number, year: number): { candidat
 // (never earlier than the previous one, equal allowed for verbatim duplicates like
 // Feb 2) whose weekday matches what's written. A weekday mismatch means either the
 // wrong seed year or a genuinely malformed header — both are parse errors, not guesses.
-function walkForward(headers: HeaderRef[], startYear: number): ResolvedDate[] | null {
+// On failure, returns the index of the first header that could not be resolved.
+function walkForward(headers: HeaderRef[], startYear: number): ResolvedDate[] | { failIndex: number } {
   let cursor = Date.UTC(startYear, 0, 1)
   let year = startYear
   const dates: ResolvedDate[] = []
 
-  for (const h of headers) {
+  for (const [i, h] of headers.entries()) {
     const startResolved = resolvePart(h.start, cursor, year)
-    if (!startResolved) return null
+    if (!startResolved) return { failIndex: i }
     cursor = startResolved.candidate
     year = startResolved.year
 
     let endDate: string | undefined
     if (h.end) {
       const endResolved = resolvePart(h.end, cursor, year)
-      if (!endResolved) return null
+      if (!endResolved) return { failIndex: i }
       cursor = endResolved.candidate
       year = endResolved.year
       endDate = isoFromUtcMs(endResolved.candidate)
@@ -89,25 +91,41 @@ function describeHeader(h: HeaderPart): string {
   return `${h.weekday}, ${MONTHS[h.monthIndex]} ${h.day}`
 }
 
+function describeFullHeader(h: HeaderRef): string {
+  return h.end ? `${describeHeader(h.start)}-${describeHeader(h.end)}` : describeHeader(h.start)
+}
+
+// Names the header that broke the walk, its line, and the header before it — the usual
+// cause is a duplicated or out-of-order block, which only makes sense next to its neighbour.
+function describeFailure(headers: HeaderRef[], failIndex: number): string {
+  const h = headers[failIndex]
+  const prev = failIndex > 0 ? headers[failIndex - 1] : null
+  const after = prev ? ` (after "${describeFullHeader(prev)}" on line ${prev.line})` : ''
+  return `"${describeFullHeader(h)}" on line ${h.line}${after}. Check for a duplicated or out-of-order day, or a wrong weekday.`
+}
+
 function resolveYears(headers: HeaderRef[], titleYear: number | null): ResolvedDate[] {
   if (headers.length === 0) return []
 
   if (titleYear !== null) {
-    const dates = walkForward(headers, titleYear)
-    if (!dates) {
-      throw new Error(`Header weekday doesn't match the declared year ${titleYear}: "${describeHeader(headers[0].start)}"`)
+    const result = walkForward(headers, titleYear)
+    if ('failIndex' in result) {
+      throw new Error(`Header weekday doesn't match the declared year ${titleYear}: ${describeFailure(headers, result.failIndex)}`)
     }
-    return dates
+    return result
   }
 
   // No title year to seed from (only exercised by tests — the real fixture always has
   // one): brute-force search a generous window around the app's known ~2026 data.
+  // Report the failure from the seed year that got furthest — that header is the real problem.
+  let furthestFail = 0
   for (let year = 2024; year <= 2100; year++) {
-    const dates = walkForward(headers, year)
-    if (dates) return dates
+    const result = walkForward(headers, year)
+    if (!('failIndex' in result)) return result
+    furthestFail = Math.max(furthestFail, result.failIndex)
   }
 
-  throw new Error(`Could not infer a year consistent with header weekdays, starting from "${describeHeader(headers[0].start)}"`)
+  throw new Error(`Could not infer a year consistent with header weekdays: ${describeFailure(headers, furthestFail)}`)
 }
 
 function findTitleYear(source: string): number | null {
@@ -118,7 +136,7 @@ function findTitleYear(source: string): number | null {
 }
 const HEADER_RE_MULTILINE = /^([A-Za-z]+, [A-Za-z]+ \d{1,2}(-[A-Za-z]+, [A-Za-z]+ \d{1,2})?)\s*$/m
 
-function matchHeader(line: string): HeaderRef | null {
+function matchHeader(line: string): Omit<HeaderRef, 'line'> | null {
   const combined = COMBINED_HEADER_RE.exec(line)
   if (combined) {
     const [, sw, sm, sd, ew, em, ed] = combined
@@ -231,9 +249,9 @@ export function parse(source: string): ParseResult {
   const lines = source.split('\n')
 
   const headers: HeaderRef[] = []
-  for (const line of lines) {
+  for (const [i, line] of lines.entries()) {
     const match = matchHeader(line)
-    if (match) headers.push(match)
+    if (match) headers.push({ ...match, line: i + 1 })
   }
   const dates = resolveYears(headers, findTitleYear(source))
 
